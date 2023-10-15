@@ -23,7 +23,7 @@ void User::init() {
 
     Poco::Data::Session session = database::Database::get().create_session();
     Statement create_stmt(session);
-    create_stmt << "CREATE TABLE IF NOT EXISTS `User` (`id` INT NOT NULL "
+    create_stmt << "CREATE TABLE IF NOT EXISTS `user` (`id` INT NOT NULL "
                    "AUTO_INCREMENT,"
                 << "`first_name` VARCHAR(256) NOT NULL,"
                 << "`last_name` VARCHAR(256) NOT NULL,"
@@ -60,6 +60,12 @@ Poco::JSON::Object::Ptr User::toJSON() const {
   return root;
 }
 
+    Poco::JSON::Object::Ptr  User::remove_password(Poco::JSON::Object::Ptr src) {
+    if (src->has("password"))
+    src->set("password", "*******");
+    return src;
+}
+
 User User::fromJSON(const std::string& str) {
   User user;
   Poco::JSON::Parser parser;
@@ -82,7 +88,7 @@ std::optional<long> User::auth(std::string& login, std::string& password) {
     Poco::Data::Session session = database::Database::get().create_session();
     Poco::Data::Statement select(session);
     long id;
-    select << "SELECT id FROM User where login=? and password=?", into(id),
+    select << "SELECT id FROM user where login=? and password=?", into(id),
         use(login), use(password),
         range(0, 1);  //  iterate over result set one row at a time
 
@@ -106,7 +112,7 @@ std::optional<User> User::read_by_id(long id) {
     Poco::Data::Statement select(session);
     User a;
     select << "SELECT id, first_name, last_name, email, gender,login,password "
-              "FROM User where id=?",
+              "FROM user where id=?",
         into(a._id), into(a._first_name), into(a._last_name), into(a._email),
         into(a._gender), into(a._login), into(a._password), use(id),
         range(0, 1);  //  iterate over result set one row at a time
@@ -133,7 +139,7 @@ std::vector<User> User::read_all() {
     std::vector<User> result;
     User a;
     select << "SELECT id, first_name, last_name, email, gender, login, password "
-              "FROM User",
+              "FROM user",
         into(a._id), into(a._first_name), into(a._last_name), into(a._email),
         into(a._gender), into(a._login), into(a._password),
         range(0, 1);  //  iterate over result set one row at a time
@@ -164,7 +170,7 @@ std::vector<User> User::search(std::string first_name, std::string last_name) {
     first_name += "%";
     last_name += "%";
     select << "SELECT id, first_name, last_name, email, gender, login, password "
-              "FROM User where first_name LIKE ? and last_name LIKE ?",
+              "FROM user where first_name LIKE ? and last_name LIKE ?",
         into(a._id), into(a._first_name), into(a._last_name), into(a._email),
         into(a._gender), into(a._login), into(a._password), use(first_name),
         use(last_name),
@@ -194,7 +200,7 @@ void User::save_to_mysql() {
     Poco::Data::Statement insert(session);
 
     insert
-        << "INSERT INTO User (first_name,last_name,email,gender,login,password) "
+        << "INSERT INTO user (first_name,last_name,email,gender,login,password) "
            "VALUES(?, ?, ?, ?, ?, ?)",
         use(_first_name), use(_last_name), use(_email), use(_gender),
         use(_login), use(_password);
@@ -274,4 +280,25 @@ std::string& User::email() {
 std::string& User::gender() {
   return _gender;
 }
+
+    std::vector<User> User::get_by_trip_id(long trip_id) {
+        Poco::Data::Session session = database::Database::get().create_session();
+        Poco::Data::Statement select(session);
+
+        std::vector<User> users;
+        User a;
+
+        select << "SELECT first_name, last_name, email, gender, login, password "
+                  "FROM user "
+                  "JOIN user_trip ON user_id = user.id "
+                  "WHERE trip_id = ?",
+                into(a._first_name), into(a._last_name), into(a._email),
+                into(a._gender), into(a._login), into(a._password), use(trip_id), range(0,1);
+
+        while(!select.done()) {
+            if (select.execute()) users.push_back(a);
+        }
+
+        return users;
+    }
 }  // namespace database

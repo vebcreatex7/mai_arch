@@ -44,6 +44,9 @@ class User {
                                   std::string last_name);
   void save_to_mysql();
 
+  static Poco::JSON::Object::Ptr remove_password(Poco::JSON::Object::Ptr src);
+  static std::vector<User> get_by_trip_id(long trip_id);
+
   Poco::JSON::Object::Ptr toJSON() const;
 };
 }  // namespace database
