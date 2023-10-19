@@ -19,30 +19,6 @@ using Poco::Data::Statement;
 
 namespace database
 {
-    void Route::init() {
-  try {
-    Poco::Data::Session session = database::Database::get().create_session();
-    Statement create_stmt(session);
-    create_stmt << "CREATE TABLE IF NOT EXISTS route("
-                << "`id` INT NOT NULL AUTO_INCREMENT,"
-                << "`from` VARCHAR(256) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL,"
-                << "`to` VARCHAR(256) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL,"
-                << "`duration` TEXT NOT NULL,"
-                << "`distance` DECIMAL NOT NULL,"
-                << "PRIMARY KEY (`id`)" 
-                <<");",
-        now;
-  }
-
-  catch (Poco::Data::MySQL::ConnectionException& e) {
-    std::cout << "connection:" << e.what() << std::endl;
-    throw;
-  } catch (Poco::Data::MySQL::StatementException& e) {
-    std::cout << "statement:" << e.what() << std::endl;
-    throw;
-  }
-}
-
     Poco::JSON::Object::Ptr Route::toJSON() {
         Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
 
@@ -62,7 +38,7 @@ namespace database
         return _to;
     }
 
-    void Route::save_to_db() {
+    void Route::create() {
         try {
         Poco::Data::Session session = database::Database::get().create_session();
         Poco::Data::Statement insert(session);
@@ -84,8 +60,6 @@ namespace database
             use(entry.from), use(entry.to), use(entry.duration), use(entry.distance);
 
         insert.execute();
-
-        std::cout << "inserted route from: " << entry.from << " to: " << entry.to << std::endl;
 
       } catch (Poco::Data::MySQL::ConnectionException& e) {
         std::cout << "connection:" << e.what() << std::endl;
@@ -117,7 +91,7 @@ namespace database
         return routes;
     }
 
-    Route Route::get(long id) {
+    std::optional<Route> Route::get(long id) {
         try {
             Poco::Data::Session session = database::Database::get().create_session();
             Poco::Data::Statement select(session);
@@ -129,7 +103,9 @@ namespace database
                       into(r._from), into(r._to), into(r._distance), into(r._duration),
                       use(id), range(0,1);
 
-            select.execute();
+            if (select.execute() != 1) {
+                return {};
+            }
 
             return r;
 

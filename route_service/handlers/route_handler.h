@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include "Poco/DateTimeFormat.h"
 #include "Poco/DateTimeFormatter.h"
 #include "Poco/Exception.h"
@@ -53,9 +54,9 @@ using Poco::Util::ServerApplication;
 
 class RouteHandler : public HTTPRequestHandler {
  public:
-  RouteHandler(const std::string& format) : _format(format) {}
+  explicit RouteHandler(std::string  format) : _format(std::move(format)) {}
 
-  std::optional<std::string> do_get(const std::string& url, const std::string& identity) {
+  static std::optional<std::string> do_get(const std::string& url, const std::string& identity) {
     std::string string_result;
 
     try {
@@ -85,13 +86,13 @@ class RouteHandler : public HTTPRequestHandler {
         return {};
     } catch (Poco::Exception& ex) {
       std::cout << "exception:" << ex.what() << std::endl;
-      return std::optional<std::string>();
+      return {};
     }
 
     return string_result;
   }
 
-  std::optional<std::string> do_get(const std::string& url,
+  static std::optional<std::string> do_get(const std::string& url,
                                     const std::string& login,
                                     const std::string& password) {
     std::string token = login + ":" + password;
@@ -104,7 +105,7 @@ class RouteHandler : public HTTPRequestHandler {
     return do_get(url, identity);
   }
 
-  bool authRequest(HTTPServerRequest& request, long& user_id) {
+  static bool authRequest(HTTPServerRequest& request, long& user_id) {
     HTMLForm form(request, request.stream());
     std::string scheme;
     std::string info;
@@ -161,6 +162,7 @@ class RouteHandler : public HTTPRequestHandler {
     if (hasSubstr(request.getURI(), "/search") &&
       (request.getMethod() == Poco::Net::HTTPRequest::HTTP_GET)) {
         handleGet( response, user_id);
+        return;
     }
 
     if (hasSubstr(request.getURI(), "/add") &&
@@ -183,14 +185,14 @@ class RouteHandler : public HTTPRequestHandler {
 
 
 
-  void handleAdd(HTTPServerRequest& request, HTTPServerResponse& response) {
+  static void handleAdd(HTTPServerRequest& request, HTTPServerResponse& response) {
     HTMLForm form(request, request.stream());
     if (form.has("from") and form.has("to")) {
       database::Route route;
       route.from() = form.get("from");
       route.to() = form.get("to");
       
-      route.save_to_db();
+      route.create();
 
       response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
       response.setChunkedTransferEncoding(true);
@@ -208,12 +210,12 @@ class RouteHandler : public HTTPRequestHandler {
     root->set("type", "/errors/bad_request");
     root->set("title", "Missing fields in create request");
     root->set("detail", "Missing fields in create request");
-    root->set("instance", "/product");
+    root->set("instance", "/route");
     std::ostream& ostr = response.send();
     Poco::JSON::Stringifier::stringify(root, ostr);
   }
 
-  void handleGet(HTTPServerResponse& response, long user_id) {
+  static void handleGet(HTTPServerResponse& response, long user_id) {
         auto res = database::Route::get_by_user_id(user_id);
 
         Poco::JSON::Array arr;
@@ -227,9 +229,7 @@ class RouteHandler : public HTTPRequestHandler {
       response.setContentType("application/json");
       std::ostream& ostr = response.send();
       Poco::JSON::Stringifier::stringify(arr, ostr);
-
-      return;
-  }
+ }
 
  private:
   std::string _format;

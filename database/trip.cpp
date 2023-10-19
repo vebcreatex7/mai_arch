@@ -34,6 +34,20 @@ namespace database {
         return root;
     }
 
+
+
+    Route &Trip::route() {
+        return _route;
+    }
+
+    Poco::Data::Date &Trip::date() {
+        return _date;
+    }
+
+    std::vector<User> &Trip::users() {
+        return _users;
+    }
+
     std::optional<Trip> Trip::get(long id) {
         try {
             Poco::Data::Session session = database::Database::get().create_session();
@@ -45,10 +59,11 @@ namespace database {
                       "WHERE id = ?",
                     into(t._route_id), into(t._date), use(id), range(0,1);
 
-            select.execute();
-            select.
+            if (select.execute() != 1) {
+                return {};
+            }
 
-            t.route() = Route::get(t._route_id);
+            t.route() = Route::get(t._route_id).value();
 
             t.users() = User::get_by_trip_id(id);
 
@@ -62,15 +77,50 @@ namespace database {
         }
     }
 
-    Route &Trip::route() {
-        return _route;
+    void Trip::create()  {
+        try {
+            Poco::Data::Session session = database::Database::get().create_session();
+            Poco::Data::Statement insert(session);
+
+            if (!(Route::get(_route_id).has_value())) {
+                throw Poco::Data::MySQL::MySQLException("no such route");
+            }
+
+            insert << "INSERT INTO trip(route_id, date) VALUES(?, ?)", use(_route_id), use(_date);
+
+            insert.execute();
+
+        } catch (Poco::Data::MySQL::ConnectionException& e) {
+            std::cout << "connection:" << e.what() << std::endl;
+            throw;
+        } catch (Poco::Data::MySQL::StatementException& e) {
+            std::cout << "statement:" << e.what() << std::endl;
+            throw;
+        }
     }
 
-    Poco::Data::Date &Trip::date() {
-        return _date;
+    void Trip::add_user(long id,long user_id) {
+        try{
+            if (!get(id).has_value()) {
+                throw Poco::Data::MySQL::MySQLException("no such trip");
+            }
+
+            Poco::Data::Session session = database::Database::get().create_session();
+            Poco::Data::Statement insert(session);
+
+            insert << "INSERT INTO user_trip(trip_id, user_id) VALUES(?, ?)", use(id), use(user_id);
+
+            insert.execute();
+        }catch (Poco::Data::MySQL::ConnectionException& e) {
+            std::cout << "connection:" << e.what() << std::endl;
+            throw;
+        } catch (Poco::Data::MySQL::StatementException& e) {
+            std::cout << "statement:" << e.what() << std::endl;
+            throw;
+        }
     }
 
-    std::vector<User> &Trip::users() {
-        return _users;
+    long &Trip::route_id() {
+        return _route_id;
     }
 }

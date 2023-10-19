@@ -1,5 +1,0 @@
-/home/kirill/mai/mai_arch/cmake-build-debug/CMakeFiles/auth_service.dir
-/home/kirill/mai/mai_arch/cmake-build-debug/CMakeFiles/route_service.dir
-/home/kirill/mai/mai_arch/cmake-build-debug/CMakeFiles/trip_service.dir
-/home/kirill/mai/mai_arch/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/kirill/mai/mai_arch/cmake-build-debug/CMakeFiles/rebuild_cache.dir

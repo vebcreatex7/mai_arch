@@ -47,7 +47,7 @@ public:
     HTTPRequestFactory(const std::string& format) : _format(format) {}
 
     HTTPRequestHandler* createRequestHandler(const HTTPServerRequest& request) {
-        const std::vector<std::string> allowed_paths{"/search" };
+        const std::vector<std::string> allowed_paths{"/search", "/add", "add_user"};
 
         std::cout << "request:" << request.getURI() << std::endl;
         for (const std::string& path : allowed_paths) {

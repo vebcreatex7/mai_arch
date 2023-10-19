@@ -26,7 +26,7 @@ namespace database {
         std::vector<User>& users();
 
         void create();
-        void add_user(long user_id);
+        static void add_user(long id,long user_id);
         static std::optional<Trip> get(long id);
     };
 }

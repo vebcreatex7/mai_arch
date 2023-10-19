@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include "Poco/DateTimeFormat.h"
 #include "Poco/DateTimeFormatter.h"
 #include "Poco/Exception.h"
@@ -47,15 +48,16 @@ using Poco::Util::Option;
 using Poco::Util::OptionCallback;
 using Poco::Util::OptionSet;
 using Poco::Util::ServerApplication;
+#include <Poco/Data/MySQL/MySQLException.h>
 
 #include "../../database/trip.h"
 #include "../../helper.h"
 
 class TripHandler : public HTTPRequestHandler {
 public:
-    TripHandler(const std::string& format) : _format(format) {}
+    explicit TripHandler(std::string  format) : _format(std::move(format)) {}
 
-    std::optional<std::string> do_get(const std::string& url, const std::string& identity) {
+    static std::optional<std::string> do_get(const std::string& url, const std::string& identity) {
         std::string string_result;
 
         try {
@@ -85,13 +87,13 @@ public:
                 return {};
         } catch (Poco::Exception& ex) {
             std::cout << "exception:" << ex.what() << std::endl;
-            return std::optional<std::string>();
+            return {};
         }
 
         return string_result;
     }
 
-    std::optional<std::string> do_get(const std::string& url,
+    static std::optional<std::string> do_get(const std::string& url,
                                       const std::string& login,
                                       const std::string& password) {
         std::string token = login + ":" + password;
@@ -105,7 +107,7 @@ public:
     }
 
 
-    bool authRequest(HTTPServerRequest& request, long& user_id) {
+    static bool authRequest(HTTPServerRequest& request, long& user_id) {
         HTMLForm form(request, request.stream());
         std::string scheme;
         std::string info;
@@ -162,6 +164,15 @@ public:
         if (hasSubstr(request.getURI(), "/search") &&
             (request.getMethod() == Poco::Net::HTTPRequest::HTTP_GET)) {
             handleGet( request, response);
+            return;
+        } else if (hasSubstr(request.getURI(), "/add") &&
+                (request.getMethod() == Poco::Net::HTTPRequest::HTTP_POST)) {
+            handleAdd(request, response);
+            return;
+        } else if (hasSubstr(request.getURI(), "/add_user") &&
+                (request.getMethod()) == Poco::Net::HTTPRequest::HTTP_PATCH) {
+            handleAddUser(request, response, user_id);
+            return;
         }
 
 
@@ -172,12 +183,12 @@ public:
         root->set("type", "/errors/not_found");
         root->set("title", "Internal exception");
         root->set("detail", "request not found");
-        root->set("instance", "/route");
+        root->set("instance", "/trip");
         std::ostream& ostr = response.send();
         Poco::JSON::Stringifier::stringify(root, ostr);
     }
 
-    void handleGet(HTTPServerRequest& request, HTTPServerResponse& response) {
+    static void handleGet(HTTPServerRequest& request, HTTPServerResponse& response) {
         HTMLForm form(request, request.stream());
         if (form.has("id")) {
             auto trip =  database::Trip::get(atol(form.get("id").c_str()));
@@ -197,9 +208,9 @@ public:
                 response.setContentType("application/json");
                 Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
                 root->set("type", "/errors/not_found");
-                root->set("title", "User not found");
+                root->set("title", "Trip not found");
                 root->set("status", "404");
-                root->set("detail", "User not found");
+                root->set("detail", "Trip not found");
                 root->set("instance", "/trip");
                 std::ostream& ostr = response.send();
                 Poco::JSON::Stringifier::stringify(root, ostr);
@@ -207,6 +218,74 @@ public:
             }
 
         }
+    }
+
+    static void handleAdd(HTTPServerRequest& request, HTTPServerResponse& response) {
+        HTMLForm form(request, request.stream());
+        if (form.has("route_id") and form.has("date")) {
+            database::Trip t;
+
+            t.route_id() = atol(form.get("route_id").c_str());
+            t.date() = form.get("date").c_str();
+
+            try {
+                t.create();
+            } catch(Poco::Data::MySQL::MySQLException& e) {
+                response.setStatus(
+                        Poco::Net::HTTPResponse::HTTPStatus::HTTP_BAD_REQUEST);
+                response.setChunkedTransferEncoding(true);
+                response.setContentType("application/json");
+                Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
+                root->set("type", "/errors/bad_request");
+                root->set("title", "Bad request");
+                root->set("status", "400");
+                root->set("detail", e.message());
+                root->set("instance", "/trip");
+                std::ostream& ostr = response.send();
+                Poco::JSON::Stringifier::stringify(root, ostr);
+                return;
+            }
+
+            response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
+            response.setChunkedTransferEncoding(true);
+            response.setContentType("application/json");
+            Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
+            std::ostream& ostr = response.send();
+            Poco::JSON::Stringifier::stringify(root, ostr);
+            return;
+        }
+    }
+
+    static void handleAddUser(HTTPServerRequest& request, HTTPServerResponse& response, long user_id) {
+        HTMLForm form(request, request.stream());
+        if (form.has("id")) {
+            try{
+                database::Trip::add_user(atol( form.get("id").c_str()), user_id);
+            } catch(Poco::Data::MySQL::MySQLException& e) {
+                response.setStatus(
+                        Poco::Net::HTTPResponse::HTTPStatus::HTTP_BAD_REQUEST);
+                response.setChunkedTransferEncoding(true);
+                response.setContentType("application/json");
+                Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
+                root->set("type", "/errors/bad_request");
+                root->set("title", "Bad request");
+                root->set("status", "400");
+                root->set("detail", e.message());
+                root->set("instance", "/trip");
+                std::ostream& ostr = response.send();
+                Poco::JSON::Stringifier::stringify(root, ostr);
+                return;
+            }
+
+            response.setStatus(Poco::Net::HTTPResponse::HTTP_OK);
+            response.setChunkedTransferEncoding(true);
+            response.setContentType("application/json");
+            Poco::JSON::Object::Ptr root = new Poco::JSON::Object();
+            std::ostream& ostr = response.send();
+            Poco::JSON::Stringifier::stringify(root, ostr);
+            return;
+        }
+
     }
 
 private:

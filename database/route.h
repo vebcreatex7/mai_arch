@@ -15,16 +15,14 @@ namespace database {
         double _distance;
 
     public:
-        static void init();
-        Route fromJSON(const std::string& str);
         Poco::JSON::Object::Ptr toJSON();
 
         std::string& from();
         std::string &to();
 
-         void save_to_db();
+        void create();
         static std::vector<Route> get_by_user_id(long user_id);
-        static Route get(long id);
+        static std::optional<Route> get(long id);
     };
 }
 

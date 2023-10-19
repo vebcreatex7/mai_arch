@@ -7,11 +7,14 @@ import mysql.connector
 
 fake = Faker()
 
-def generate_password(length, alphabet=[
+
+def generate_password(length, alphabet=None):
+    if alphabet is None:
+        alphabet = [
             *string.ascii_lowercase, *string.ascii_uppercase,
             '-', '_', '.', '@', '&']
-        ):
     return ''.join([random.choice(alphabet) for _ in range(length)])
+
 
 def get_duration(distance):
     time = (distance / 80) * 3600
@@ -19,10 +22,10 @@ def get_duration(distance):
     time = time % (24 * 3600)
     hour = int(time // 3600)
     time %= 3600
-    minutes = int(time // 60)       
+    minutes = int(time // 60)
     return f'{day}d:{hour}h:{minutes}m'
 
-            
+
 def generate_users(n=1):
     genders = {'M': 'male', 'F': 'female'}
     res = []
@@ -56,12 +59,14 @@ def generate_routes(n=1):
         )
     return res
 
+
 def random_date():
     d = date(2023, 1, 1)
 
     d += timedelta(days=random.randint(1, 365))
 
     return d
+
 
 def generate_trip(k, n):
     res = []
@@ -74,6 +79,7 @@ def generate_trip(k, n):
             }
         )
     return res
+
 
 def generate_user_trip(k, l, n):
     res = []
@@ -91,6 +97,7 @@ def drop_tables(cursor):
     cursor.execute(("DROP TABLE IF EXISTS trip CASCADE"))
     cursor.execute(("DROP TABLE IF EXISTS user CASCADE"))
     cursor.execute(("DROP TABLE IF EXISTS route CASCADE"))
+
 
 def create_tables(cursor):
     cursor.execute("""CREATE TABLE IF NOT EXISTS `user` (
@@ -123,7 +130,7 @@ def create_tables(cursor):
     FOREIGN KEY (`route_id`) REFERENCES route(`id`)
     );
     """)
-        
+
     cursor.execute("""CREATE TABLE IF NOT EXISTS user_trip(
     `id` INT NOT NULL AUTO_INCREMENT,
     `user_id` INT NOT NULL,
@@ -135,14 +142,12 @@ def create_tables(cursor):
     );""")
 
 
-
 def main():
     connection = mysql.connector.connect(
-        host="localhost",
+        host="all-db",
         database="archdb",
         user="stud",
-        password="stud",
-        port="3360"
+        password="stud"
     )
 
     c = connection.cursor()
@@ -156,22 +161,24 @@ def main():
     user_trip_count = 100
 
     c.executemany(("INSERT INTO `user` "
-        "(`first_name`, `last_name`, `login`, `password`, `email`, `gender`) "
-        "VALUES (%(first_name)s, %(last_name)s, %(login)s, %(password)s, %(email)s, %(gender)s)"), generate_users(users_count))
+                   "(`first_name`, `last_name`, `login`, `password`, `email`, `gender`) "
+                   "VALUES (%(first_name)s, %(last_name)s, %(login)s, %(password)s, %(email)s, %(gender)s)"),
+                  generate_users(users_count))
 
     c.executemany(("INSERT INTO `route` "
-        "(`from`, `to`, `distance`, `duration`) "
-        "VALUES (%(from)s, %(to)s, %(distance)s, %(duration)s)"), generate_routes(routes_count))
+                   "(`from`, `to`, `distance`, `duration`) "
+                   "VALUES (%(from)s, %(to)s, %(distance)s, %(duration)s)"), generate_routes(routes_count))
 
     c.executemany(("INSERT INTO `trip` "
-        "(`route_id`, `date`) "
-        "VALUES (%(route_id)s, %(date)s)"), generate_trip(trips_count, routes_count))
+                   "(`route_id`, `date`) "
+                   "VALUES (%(route_id)s, %(date)s)"), generate_trip(trips_count, routes_count))
 
     c.executemany(("INSERT INTO `user_trip` "
-        "(`trip_id`, `user_id`) "
-        "VALUES (%(trip_id)s, %(user_id)s)"), generate_user_trip(user_trip_count, trips_count, users_count))
-    
+                   "(`trip_id`, `user_id`) "
+                   "VALUES (%(trip_id)s, %(user_id)s)"), generate_user_trip(user_trip_count, trips_count, users_count))
+
     connection.commit()
+
 
 if __name__ == "__main__":
     main()
