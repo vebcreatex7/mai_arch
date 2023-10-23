@@ -5,6 +5,6 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
-COPY init.py .
+COPY init.py basemod.py .
 
 CMD ["python3", "init.py"]

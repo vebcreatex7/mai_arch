@@ -23,7 +23,7 @@ namespace database {
 
         Poco::JSON::Array users;
 
-        for (auto a : _users) {
+        for (const auto& a : _users) {
             users.add(User::remove_password(a.toJSON()));
         }
 
@@ -64,8 +64,7 @@ namespace database {
             }
 
             t.route() = Route::get(t._route_id).value();
-
-            t.users() = User::get_by_trip_id(id);
+            t.users() = User::get_by_ids(get_user_id_by_trip_id(id));
 
             return t;
         } catch (Poco::Data::MySQL::ConnectionException& e) {
@@ -122,5 +121,31 @@ namespace database {
 
     long &Trip::route_id() {
         return _route_id;
+    }
+
+    std::vector<long> Trip::get_user_id_by_trip_id(long trip_id) {
+        try {
+            Poco::Data::Session session = database::Database::get().create_session();
+            Poco::Data::Statement select(session);
+
+            std::vector<long> user_ids;
+            long user_id;
+
+            select << "SELECT user_id FROM user_trip WHERE trip_id = ?", use(trip_id), into(user_id),
+                range(0,1);
+
+            while(!select.done()) {
+                if(select.execute()) user_ids.push_back(user_id);
+            }
+
+            return user_ids;
+        } catch (Poco::Data::MySQL::ConnectionException& e) {
+            std::cout << "connection:" << e.what() << std::endl;
+            throw;
+        } catch (Poco::Data::MySQL::StatementException& e) {
+
+            std::cout << "statement:" << e.what() << std::endl;
+            throw;
+        }
     }
 }

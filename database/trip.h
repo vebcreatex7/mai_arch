@@ -16,6 +16,7 @@ namespace database {
         long _route_id;
         Route _route;
         std::vector<User> _users;
+        static std::vector<long> get_user_id_by_trip_id(long trip_id);
 
     public:
         Poco::JSON::Object::Ptr toJSON();
@@ -28,6 +29,7 @@ namespace database {
         void create();
         static void add_user(long id,long user_id);
         static std::optional<Trip> get(long id);
+
     };
 }
 
