@@ -96,7 +96,7 @@ def generate_user_trip(k, l, n):
 def drop_tables():
     for i in range(basemod.SHARD_COUNT):
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -104,7 +104,7 @@ def drop_tables():
         )
         connection.execute((f"DROP TABLE IF EXISTS user_trip CASCADE; {basemod.get_hint(i)}"))
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -112,7 +112,7 @@ def drop_tables():
         )
         connection.execute((f"DROP TABLE IF EXISTS trip CASCADE {basemod.get_hint(i)}"))
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -120,7 +120,7 @@ def drop_tables():
         )
         connection.execute((f"DROP TABLE IF EXISTS user CASCADE {basemod.get_hint(i)}"))
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -132,7 +132,7 @@ def drop_tables():
 def create_tables():
     for i in range(basemod.SHARD_COUNT):
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -149,7 +149,7 @@ def create_tables():
         KEY `fn` (`first_name`), KEY `ln` (`last_name`)
         ); {basemod.get_hint(i)}""")
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -166,7 +166,7 @@ def create_tables():
         );""")
 
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -181,7 +181,7 @@ def create_tables():
         );""")
 
         connection = basemod.MySQLConnection(
-            host="127.0.0.1",
+            host="all-db",
             port="6033",
             database="archdb",
             user="stud",
@@ -197,7 +197,7 @@ def create_tables():
 
 def drop_seq():
     connection = basemod.MySQLConnection(
-        host="127.0.0.1",
+        host="all-db",
         port="6033",
         database="archdb",
         user="stud",
@@ -208,7 +208,7 @@ def drop_seq():
 
 def create_seq(n):
     connection = basemod.MySQLConnection(
-        host="127.0.0.1",
+        host="all-db",
         port="6033",
         database="archdb",
         user="stud",
@@ -219,7 +219,7 @@ def create_seq(n):
 
 def main():
     connection = basemod.MySQLConnection(
-        host="127.0.0.1",
+        host="all-db",
         port="6033",
         database="archdb",
         user="stud",
@@ -230,7 +230,7 @@ def main():
     create_tables()
     drop_seq()
 
-    users_count = 200
+    users_count = 5000
     routes_count = 200
     trips_count = 50
     user_trip_count = 100

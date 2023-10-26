@@ -2,6 +2,7 @@
 #include "../config/config.h"
 #include "database.h"
 #include "../helper.h"
+#include "cache.h"
 
 #include <Poco/Data/MySQL/Connector.h>
 #include <Poco/Data/MySQL/MySQLException.h>
@@ -65,16 +66,16 @@ namespace database {
     }
 
     Poco::JSON::Object::Ptr  User::remove_password(Poco::JSON::Object::Ptr src) {
-    if (src->has("password"))
-    src->set("password", "*******");
-    return src;
-}
+        if (src->has("password"))
+            src->set("password", "*******");
+        return src;
+    }
 
-User User::fromJSON(const std::string& str) {
-  User user;
-  Poco::JSON::Parser parser;
-  Poco::Dynamic::Var result = parser.parse(str);
-  Poco::JSON::Object::Ptr object = result.extract<Poco::JSON::Object::Ptr>();
+    User User::fromJSON(const std::string& str) {
+        User user;
+        Poco::JSON::Parser parser;
+        Poco::Dynamic::Var result = parser.parse(str);
+        Poco::JSON::Object::Ptr object = result.extract<Poco::JSON::Object::Ptr>();
 
         user.id() = object->getValue<long>("id");
         user.first_name() = object->getValue<std::string>("first_name");
@@ -115,21 +116,31 @@ User User::fromJSON(const std::string& str) {
         }
         return {};
     }
-    std::optional<User> User::read_by_id(long id) {
+    std::optional<User> User::read_by_id(long id,bool use_cache) {
+        if (use_cache) {
+            std::optional<User> opt_user = read_from_cache_by_id(id);
+            if (opt_user) {
+                return opt_user;
+            }
+        }
+
         try {
             Poco::Data::Session session = database::Database::get().create_session();
             User a;
-                Poco::Data::Statement select(session);
-                select << "SELECT id, first_name, last_name, email, gender,login,password "
-                          "FROM user where id=?" << Database::get_sharding_hint(get_hash(std::to_string(id))),
-                        into(a._id), into(a._first_name), into(a._last_name), into(a._email),
-                        into(a._gender), into(a._login), into(a._password), use(id),
-                        range(0, 1);  //  iterate over result set one row at a time
+            Poco::Data::Statement select(session);
+            select << "SELECT id, first_name, last_name, email, gender,login,password "
+                      "FROM user where id=?" << Database::get_sharding_hint(get_hash(std::to_string(id))),
+                    into(a._id), into(a._first_name), into(a._last_name), into(a._email),
+                    into(a._gender), into(a._login), into(a._password), use(id),
+                    range(0, 1);  //  iterate over result set one row at a time
 
-                select.execute();
-                Poco::Data::RecordSet rs(select);
-                if (rs.moveFirst())
-                    return a;
+            select.execute();
+            Poco::Data::RecordSet rs(select);
+            if (rs.moveFirst()) {
+                if (use_cache) a.save_to_cache();
+                return a;
+            }
+
 
         }
 
@@ -226,6 +237,8 @@ User User::fromJSON(const std::string& str) {
             std::cout << insert.toString() << std::endl;
 
             insert.execute();
+
+            save_to_cache();
 
             std::cout << "inserted:" << _id << std::endl;
         } catch (Poco::Data::MySQL::ConnectionException& e) {
@@ -343,4 +356,25 @@ User User::fromJSON(const std::string& str) {
             throw;
         }
     }
+
+    void User::save_to_cache() const {
+        std::stringstream ss;
+        Poco::JSON::Stringifier::stringify(toJSON(), ss);
+        std::string message = ss.str();
+        database::Cache::get().put(_id, message);
+    }
+
+    std::optional<User> User::read_from_cache_by_id(long id) {
+        try {
+            std::string result;
+            if (database::Cache::get().get(id, result))
+                return fromJSON(result);
+            else
+                return {};
+        }
+        catch (std::exception &err) {
+            return {};
+        }
+    }
+
 }  // namespace database

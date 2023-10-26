@@ -4,7 +4,9 @@ project(hl_service_mesh C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(REDISCPP_FLAGS "-DREDISCPP_HEADER_ONLY=ON")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall ${REDISCPP_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -Wall -DNDEBUG ${REDISCPP_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(AUTH_SERVICE "auth_service")
@@ -30,7 +32,8 @@ link_directories("/usr/local/lib")
 add_executable(${AUTH_SERVICE} auth_service/main.cpp
                                  config/config.cpp
                                  database/database.cpp
-                                 database/user.cpp)
+                                 database/user.cpp
+                                 database/cache.cpp)
 target_include_directories(${AUTH_SERVICE} PRIVATE "${CMAKE_BINARY_DIR}")
 target_compile_options(${AUTH_SERVICE} PRIVATE -Wall -Wextra -pedantic -Werror )
 set_target_properties(${AUTH_SERVICE} PROPERTIES LINKER_LANGUAGE CXX)
@@ -64,7 +67,8 @@ target_link_libraries(${ROUTE_SERVICE} PRIVATE
                                   database/database.cpp
                                   database/trip.cpp
                                   database/user.cpp
-                                  database/route.cpp)
+                                  database/route.cpp
+                                  database/cache.cpp)
  target_include_directories(${TRIP_SERVICE} PRIVATE "${CMAKE_BINARY_DIR}")
  target_compile_options(${TRIP_SERVICE} PRIVATE -Wall -Wextra -pedantic -Werror )
  set_target_properties(${TRIP_SERVICE} PROPERTIES LINKER_LANGUAGE CXX)

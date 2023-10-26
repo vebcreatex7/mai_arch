@@ -14,6 +14,15 @@ RUN git clone -b master https://github.com/pocoproject/poco.git && \
     sudo make install && \
     cd ../..
 
+RUN git clone https://github.com/tdv/redis-cpp.git && \
+    mkdir redis-cpp/build && \
+    cd redis-cpp/build && \
+    cmake .. && \
+    make && \
+    sudo make install && \
+    cd ../..
+
+
 WORKDIR /app
 COPY ./ ./
 
