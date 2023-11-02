@@ -41,11 +41,11 @@ namespace database {
         static std::optional<User> read_by_id(long id, bool use_cache = true);
         static std::vector<User> get_by_ids(const std::vector<long>& ids);
         static std::optional<long> auth(std::string& login, std::string& password);
-        static std::vector<User> read_all();
         static std::vector<User> search(std::string first_name,
                                         std::string last_name);
         void save_to_mysql();
         void save_to_cache() const;
+        void send_to_queue() const;
         static std::optional<User> read_from_cache_by_id(long id);
     static Poco::JSON::Object::Ptr remove_password(Poco::JSON::Object::Ptr src);
     static long generate_id();

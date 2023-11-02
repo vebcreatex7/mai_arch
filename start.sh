@@ -4,5 +4,6 @@ export DB_LOGIN=stud
 export DB_PASSWORD=stud
 export DB_DATABASE=archdb
 export CACHE=127.0.0.1:6379
+# add topic
 
-./build/auth_service
+valgrind ./build/route_service

@@ -22,6 +22,8 @@ RUN git clone https://github.com/tdv/redis-cpp.git && \
     sudo make install && \
     cd ../..
 
+RUN git clone https://github.com/edenhill/librdkafka.git && cd librdkafka && ./configure && make && sudo make install && cd ..
+RUN git clone https://github.com/mfontanini/cppkafka && cd cppkafka && mkdir build && cd build && cmake .. && make && sudo make install && cd .. && cd ..
 
 WORKDIR /app
 COPY ./ ./

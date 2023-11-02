@@ -14,6 +14,8 @@
 #include <functional>
 #include <exception>
 #include <sstream>
+#include <cppkafka/cppkafka.h>
+#include <mutex>
 
 using namespace Poco::Data::Keywords;
 using Poco::Data::Session;
@@ -151,37 +153,6 @@ namespace database {
             std::cout << "statement:" << e.what() << std::endl;
         }
         return {};
-    }
-
-    std::vector<User> User::read_all() {
-        try {
-            Poco::Data::Session session = database::Database::get().create_session();
-            std::vector<User> result;
-            User a;
-            for (const auto& hint : database::Database::get_all_sharding_hints()) {
-                Statement select(session);
-                select << "SELECT id, first_name, last_name, email, gender, login, password "
-                          "FROM user" + hint,
-                        into(a._id), into(a._first_name), into(a._last_name), into(a._email),
-                        into(a._gender), into(a._login), into(a._password),
-                        range(0, 1);  //  iterate over result set one row at a time
-
-                while (!select.done()) {
-                    if (select.execute())
-                        result.push_back(a);
-                }
-            }
-            return result;
-        }
-
-        catch (Poco::Data::MySQL::ConnectionException& e) {
-            std::cout << "connection:" << e.what() << std::endl;
-            throw;
-        } catch (Poco::Data::MySQL::StatementException& e) {
-
-            std::cout << "statement:" << e.what() << std::endl;
-            throw;
-        }
     }
 
     std::vector<User> User::search(std::string first_name, std::string last_name) {
@@ -332,9 +303,9 @@ namespace database {
                 for (auto id : ids) {
                     Statement select(session);
                     User a;
-                    select << "SELECT first_name, last_name, email, gender, login, password "
-                              "FROM user WHERE id = ? " << hint, use(id), into(a._first_name), into(a._last_name), into(a._email),
-                            into(a._gender), into(a._login), into(a._password), range(0,1);
+                    select << "SELECT id, first_name, last_name, email, gender, login, password "
+                              "FROM user WHERE id = ? " << hint, use(id), into(a._id), into(a._first_name), into(a._last_name), into(a._email),
+                             into(a._gender), into(a._login), into(a._password), range(0,1);
 
                     std::cout << select.toString() << std::endl;
 
@@ -374,6 +345,39 @@ namespace database {
         }
         catch (std::exception &err) {
             return {};
+        }
+    }
+
+    void User::send_to_queue() const {
+        static cppkafka::Configuration config = {
+                {"metadata.broker.list", Config::get().get_queue_host()},
+                {"acks", "all"}
+        };
+
+        static cppkafka::Producer producer(config);
+        static std::mutex mtx;
+        static int message_key{0};
+        using Hdr = cppkafka::MessageBuilder::HeaderType;
+
+        std::lock_guard<std::mutex> lock(mtx);
+        std::stringstream ss;
+        Poco::JSON::Stringifier::stringify(toJSON(), ss);
+        std::string message = ss.str();
+        bool not_sent = true;
+
+        cppkafka::MessageBuilder builder(Config::get().get_queue_topic());
+        std::string mk = std::to_string(++message_key);
+        builder.key(mk);                                       
+        builder.header(Hdr{"producer_type", "author writer"}); 
+        builder.payload(message);                              
+
+        while (not_sent) {
+            try {
+                producer.produce(builder);
+                not_sent = false;
+            }
+            catch (...) {
+            }
         }
     }
 

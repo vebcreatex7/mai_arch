@@ -7,6 +7,9 @@ Config::Config() {
     _password = std::getenv("DB_PASSWORD");
     _database = std::getenv("DB_DATABASE");
     _cache_servers = std::getenv("CACHE");
+    _queue_host = std::getenv("QUEUE_HOST");
+    _queue_topic = std::getenv("QUEUE_TOPIC");
+    _queue_group_id = std::getenv("QUEUE_GROUP_ID");
 
 }
 
@@ -37,6 +40,17 @@ const std::string& Config::get_database() const {
 const std::string &Config::get_cache_servers() const {
     return _cache_servers;
 }
+const std::string &Config::get_queue_group_id() const {
+    return _queue_group_id;
+}
+
+const std::string &Config::get_queue_host() const {
+    return _queue_host;
+}
+
+const std::string &Config::get_queue_topic() const {
+    return _queue_topic;
+}
 
 std::string& Config::port() {
     return _port;
@@ -60,4 +74,16 @@ std::string& Config::database() {
 
 std::string &Config::cache_servers() {
     return _cache_servers;
+}
+
+std::string &Config::queue_group_id() {
+    return _queue_group_id;
+}
+
+std::string &Config::queue_host() {
+    return _queue_host;
+}
+
+std::string &Config::queue_topic() {
+    return _queue_topic;
 }

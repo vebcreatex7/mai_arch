@@ -13,10 +13,12 @@ set(AUTH_SERVICE "auth_service")
 set(ROUTE_SERVICE "route_service")
 set(TRIP_SERVICE "trip_service")
 set(OTHER_SERVICE "other_service")
+set(CONSUMER_SERVICE "consumer_service")
 
 find_package(OpenSSL)
 find_package(Threads)
 find_package(ZLIB)
+find_package(CppKafka REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Util Net XML JSON Crypto NetSSL)
 
 
@@ -44,6 +46,8 @@ target_link_libraries(${AUTH_SERVICE} PRIVATE
                              "PocoData"
                              "PocoDataMySQL"
                              "mysqlclient"
+                             "rdkafka++"
+                             CppKafka::cppkafka
                              ZLIB::ZLIB)
 
 add_executable(${ROUTE_SERVICE} route_service/main.cpp
@@ -60,6 +64,7 @@ target_link_libraries(${ROUTE_SERVICE} PRIVATE
                              "PocoData"
                              "PocoDataMySQL"
                              "mysqlclient"
+                             "rdkafka++"
                              ZLIB::ZLIB)
 
  add_executable(${TRIP_SERVICE}  trip_service/main.cpp
@@ -79,4 +84,25 @@ target_link_libraries(${ROUTE_SERVICE} PRIVATE
                               "PocoData"
                               "PocoDataMySQL"
                               "mysqlclient"
+                              "rdkafka++"
+                              CppKafka::cppkafka
                               ZLIB::ZLIB)
+
+add_executable(${CONSUMER_SERVICE} consumer_service/main.cpp
+        config/config.cpp
+        database/database.cpp
+        database/cache.cpp
+        database/user.cpp)
+target_include_directories(${CONSUMER_SERVICE} PRIVATE "${CMAKE_BINARY_DIR}")
+target_compile_options(${CONSUMER_SERVICE} PRIVATE -Wall -Wextra -pedantic -Werror )
+set_target_properties(${CONSUMER_SERVICE} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${CONSUMER_SERVICE} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+target_link_libraries(${CONSUMER_SERVICE} PRIVATE
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${Poco_LIBRARIES}
+        "PocoData"
+        "PocoDataMySQL"
+        "rdkafka++"
+        CppKafka::cppkafka
+        "mysqlclient"
+        ZLIB::ZLIB)
